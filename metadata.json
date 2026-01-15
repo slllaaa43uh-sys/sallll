@@ -1,0 +1,9 @@
+{
+  "name": "Copy of ي",
+  "description": "A modern, Arabic-first social media interface featuring a feed, marketplace, jobs, and shorts navigation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

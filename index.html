@@ -1,0 +1,242 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#f3f4f6" id="theme-color-meta" />
+    <!-- Updated Favicon to check for app-logo.jpg first, fallback to emoji if needed by browser logic (here we keep svg for reliability) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="/assets/images/app-logo.jpg" />
+    <title>Social Connect</title>
+    
+    <!-- CRITICAL: Immediate Theme Script (Run before anything else) -->
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('darkMode');
+          var savedLang = localStorage.getItem('app_language');
+          
+          // 1. Force Dark Mode State Immediately
+          if (savedTheme === 'true') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.backgroundColor = '#000000';
+            document.body && (document.body.style.backgroundColor = '#000000');
+            var metaMeta = document.getElementById('theme-color-meta');
+            if (metaMeta) metaMeta.setAttribute('content', '#000000');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.backgroundColor = '#f3f4f6';
+          }
+
+          // 2. Apply Language
+          if (savedLang === 'en') {
+            document.documentElement.lang = 'en';
+            document.documentElement.dir = 'ltr';
+          } else {
+            document.documentElement.lang = 'ar';
+            document.documentElement.dir = 'rtl';
+          }
+        } catch (e) {
+          console.error('Theme restore error', e);
+        }
+      })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {}
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      /* --- GLOBAL RESET & PERFORMANCE --- */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .view, .modal, .btn-anim {
+        transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+      }
+
+      body, html {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Cairo', sans-serif;
+        background-color: #f3f4f6; /* Default Light */
+        overscroll-behavior-y: none;
+        overflow: hidden;
+      }
+
+      #root {
+        height: 100%;
+        width: 100%;
+      }
+
+      .disable-transitions * {
+        transition: none !important;
+      }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      /* --- FIX: Native-like Scrolling to prevent Gray Screen --- */
+      .native-scroll {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        /* Hardware acceleration hints for the scroll container */
+        transform: translateZ(0);
+        will-change: scroll-position;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+
+      main { position: relative; width: 100%; height: 100%; }
+      
+      /* FIXED: Removed transform: translate3d(0,0,0) from the wrapper to avoid conflict */
+      .view {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; background-color: #f0f2f5;
+        opacity: 0; pointer-events: none; z-index: 0;
+      }
+      .view.active { opacity: 1; pointer-events: auto; z-index: 10; }
+
+      @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      .animate-slide-up-fast { animation: slide-up-fast 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform; }
+
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+      .pt-safe { padding-top: env(safe-area-inset-top); }
+
+      /* --- CRITICAL DARK MODE OVERRIDES (Prevents Flash) --- */
+      html.dark { background-color: #000000 !important; }
+      html.dark body { background-color: #000000 !important; color: #e4e4e7 !important; }
+      html.dark #root { background-color: #000000 !important; }
+      html.dark .view { background-color: #000000 !important; }
+
+      html.dark .bg-white { background-color: #121212 !important; color: #e4e4e7 !important; }
+      html.dark .bg-gray-5 { background-color: #18181b !important; color: #d4d4d8 !important; }
+      html.dark .bg-gray-100 { background-color: #27272a !important; }
+      html.dark .bg-gray-200 { background-color: #3f3f46 !important; }
+      html.dark .bg-gray-900 { background-color: #000000 !important; } 
+      
+      html.dark .text-gray-900 { color: #ffffff !important; }
+      html.dark .text-gray-800 { color: #f4f4f5 !important; }
+      html.dark .text-gray-700 { color: #d4d4d8 !important; }
+      html.dark .text-gray-600 { color: #a1a1aa !important; }
+      html.dark .text-gray-500 { color: #71717a !important; }
+      html.dark .text-black { color: #ffffff !important; }
+      html.dark .text-blue-600 { color: #60a5fa !important; }
+
+      html.dark .border-gray-50,
+      html.dark .border-gray-100, 
+      html.dark .border-gray-200, 
+      html.dark .border-gray-300 { border-color: #27272a !important; }
+      html.dark .divide-gray-50 > * + * { border-color: #27272a !important; }
+
+      html.dark input, 
+      html.dark textarea { 
+        background-color: #18181b !important; 
+        color: #fff !important; 
+        border-color: #3f3f46 !important;
+      }
+      html.dark input::placeholder,
+      html.dark textarea::placeholder { color: #52525b !important; }
+
+      html.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
+      html.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.15) !important; }
+      html.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.15) !important; }
+      html.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15) !important; }
+      html.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
+      html.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15) !important; }
+      
+      html.dark nav.bg-white { 
+        background-color: #000000 !important; 
+        border-top-color: #27272a !important; 
+      }
+      html.dark .fixed.bg-white { background-color: #121212 !important; }
+      html.dark .text-gray-400 { color: #52525b !important; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "firebase/app": "https://esm.sh/firebase@^12.7.0/app",
+    "firebase/messaging": "https://esm.sh/firebase@^12.7.0/messaging",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root">
+      <!-- STATIC PRE-RENDERED SPLASH SCREEN -->
+      <div class="fixed inset-0 z-[9999] bg-white dark:bg-black flex flex-col items-center justify-between pb-10 pt-safe">
+        
+        <!-- Top Spacer -->
+        <div class="flex-1"></div>
+  
+        <!-- Center Logo with Fallback Logic -->
+        <div class="flex-1 flex flex-col items-center justify-center">
+          <div class="w-32 h-32 rounded-3xl shadow-2xl shadow-blue-100 dark:shadow-none mb-6 overflow-hidden bg-white flex items-center justify-center relative">
+             <!-- The Image: Using absolute path /assets/images/app-logo.jpg -->
+             <img 
+               src="/assets/images/app-logo.jpg" 
+               alt="مهنتي لي" 
+               class="w-full h-full object-contain relative z-10 p-2" 
+               onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex'" 
+             />
+             <!-- The Fallback Icon (Hidden by default) -->
+             <div id="fallback-logo" class="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-600 items-center justify-center hidden w-full h-full">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                   <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+                   <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                 </svg>
+             </div>
+          </div>
+          <!-- Font inheritance from body (Cairo) -->
+          <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">مهنتي لي</h1>
+        </div>
+  
+        <!-- Bottom Developer Info -->
+        <div class="flex-1 flex flex-col justify-end items-center w-full">
+          <div class="flex flex-col items-center gap-3">
+            <span class="text-gray-400 text-[10px] tracking-widest font-medium uppercase">From</span>
+            
+            <div class="flex items-center gap-2.5">
+              <div class="relative w-8 h-8 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 dark:text-gray-700 absolute">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                  </svg>
+                  <div class="w-4 h-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-sm rotate-45 shadow-sm"></div>
+              </div>
+              
+              <span class="text-lg font-bold text-gray-800 dark:text-gray-200 tracking-wide">
+                مهدلي
+              </span>
+            </div>
+          </div>
+        </div>
+  
+      </div>
+    </div>
+    
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
