@@ -30,6 +30,19 @@ const COUNTRY_CODES: Record<string, string> = {
   "سوريا": "963"
 };
 
+// Helper for CORS requests
+const fetchWithCors = (url: string, options: RequestInit = {}) => {
+  return fetch(url, {
+    ...options,
+    mode: 'cors',
+    credentials: 'omit',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+};
+
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const { t, language, setLanguage } = useLanguage();
   const [email, setEmail] = useState('');
@@ -102,9 +115,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setIsVerifying(true);
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-email`, {
+        const response = await fetchWithCors(`${API_BASE_URL}/api/v1/auth/verify-email`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userIdForVerification, code })
         });
 
@@ -158,58 +170,64 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent ) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (response.ok) {
         if (data.requireVerification) {
-            setUserIdForVerification(data.userId);
-            setIsVerificationOpen(true);
-            setIsLoading(false);
-            return;
+          setUserIdForVerification(data.userId);
+          setIsVerificationOpen(true);
+          setIsLoading(false);
+          return;
         }
 
-        setTimeout(() => {
-            localStorage.setItem('token', data.token);
-            const userObj = data.user || {};
-            const userId = userObj._id || userObj.id || data.userId || data.id;
-            
-            if (userId) {
-              localStorage.setItem('userId', userId);
-              localStorage.setItem('userName', userObj.name || 'مستخدم');
-              localStorage.setItem('userEmail', userObj.email || '');
-              localStorage.setItem('userAvatar', userObj.avatar || '');
-              localStorage.setItem('username', userObj.username || '');
-            }
-            onLoginSuccess(data.token);
-        }, 800);
+        localStorage.setItem('token', data.token);
+        const userObj = data.user || {};
+        const userId = userObj._id || userObj.id || data.userId;
+        
+        if (userId) {
+          localStorage.setItem('userId', userId);
+          localStorage.setItem('userName', userObj.name || 'مستخدم');
+          localStorage.setItem('userEmail', userObj.email || '');
+          localStorage.setItem('userAvatar', userObj.avatar || '');
+          localStorage.setItem('username', userObj.username || '');
+        }
+        onLoginSuccess(data.token);
       } else {
-        setError(data.message || 'فشل تسجيل الدخول. تأكد من البيانات.');
+        setError(data.message || 'فشل تسجيل الدخول');
         setIsLoading(false);
       }
     } catch (err: any) {
       console.error("Login Error:", err);
-      // Detailed error for user to diagnose CORS
-      setError('خطأ في الاتصال بالخادم. تأكد من الرابط أو إعدادات الأمان (CORS).');
+      if (err.name === 'AbortError') {
+        setError('انتهت مهلة الاتصال. تأكد من اتصالك بالإنترنت.');
+      } else {
+        setError('خطأ في الاتصال. جرب مرة أخرى.');
+      }
       setIsLoading(false);
     }
   };
-
-  // ... (Rest of the component remains same, omitted for brevity but preserved in real file)
-  // Re-implementing necessary handlers to ensure file completeness
 
   const handleRegisterTypeSelect = (type: 'individual' | 'company') => {
     setRegisterType(type);
@@ -268,9 +286,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsRegistering(true);
     
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+        const response = await fetchWithCors(`${API_BASE_URL}/api/v1/auth/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 name: regName,
                 email: regEmail,
@@ -311,9 +328,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     if (!userIdForVerification) return;
     setIsResending(true);
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/resend-verification`, {
+        const response = await fetchWithCors(`${API_BASE_URL}/api/v1/auth/resend-verification`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userIdForVerification })
         });
         if (response.ok) alert(t('resend_code_sent'));
@@ -336,9 +352,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsResetting(true);
     setResetMessage(null);
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgotpassword`, {
+        const response = await fetchWithCors(`${API_BASE_URL}/api/v1/auth/forgotpassword`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: forgotEmail })
         });
         if (response.ok) {

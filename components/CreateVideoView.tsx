@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { X, SwitchCamera, Image as ImageIcon, Video, Zap, Settings, MoreVertical, Timer } from 'lucide-react';
+import { X, SwitchCamera, Image as ImageIcon, Zap, Settings, ChevronLeft, Circle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface CreateVideoViewProps {
@@ -16,12 +16,11 @@ const CreateVideoView: React.FC<CreateVideoViewProps> = ({ onClose, onVideoReady
   const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('user');
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
   const [isRecording, setIsRecording] = useState(false);
-  const [hasPermission, setHasPermission] = useState(true);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerIntervalRef = useRef<any>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   const startCamera = async () => {
     try {
@@ -31,8 +30,8 @@ const CreateVideoView: React.FC<CreateVideoViewProps> = ({ onClose, onVideoReady
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
             facingMode: cameraFacingMode,
-            height: { ideal: 1280 },
-            frameRate: { ideal: 30 }
+            height: { ideal: 1920 }, // High quality
+            width: { ideal: 1080 }
         },
         audio: true
       });
@@ -40,9 +39,8 @@ const CreateVideoView: React.FC<CreateVideoViewProps> = ({ onClose, onVideoReady
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-      setHasPermission(true);
     } catch (err) {
-      setHasPermission(false);
+      console.error("Camera access denied", err);
     }
   };
 
@@ -55,20 +53,6 @@ const CreateVideoView: React.FC<CreateVideoViewProps> = ({ onClose, onVideoReady
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [cameraFacingMode]);
-
-  const handleStartSequence = () => {
-    setCountdown(3);
-    let count = 3;
-    const interval = setInterval(() => {
-        count--;
-        if (count > 0) setCountdown(count);
-        else {
-            clearInterval(interval);
-            setCountdown(null);
-            startRecording();
-        }
-    }, 1000);
-  };
 
   const startRecording = () => {
     if (streamRef.current) {
@@ -110,77 +94,91 @@ const CreateVideoView: React.FC<CreateVideoViewProps> = ({ onClose, onVideoReady
   return (
     <div className="fixed inset-0 z-[200] bg-black text-white flex flex-col font-sans h-[100dvh] overflow-hidden select-none">
       
-      {/* Native Android Header (Status & Icons) */}
-      <div className="absolute top-0 left-0 right-0 z-30 p-5 pt-safe flex justify-between items-center bg-gradient-to-b from-black/40 to-transparent">
-        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-          <X size={26} strokeWidth={2.5} />
+      {/* Top Bar (Android Style) */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-4 pt-safe flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
+        <button onClick={onClose} className="p-2 rounded-full hover:bg-black/20 transition-colors">
+          <X size={28} strokeWidth={1.5} className="drop-shadow-md" />
         </button>
         
         {isRecording ? (
-           <div className="bg-red-600 px-4 py-1.5 rounded-full flex items-center gap-2 animate-pulse shadow-lg border border-white/20">
+           <div className="bg-red-600 px-3 py-1 rounded-full flex items-center gap-2 shadow-lg animate-pulse">
               <div className="w-2 h-2 bg-white rounded-full"></div>
-              <span className="text-sm font-black tracking-widest">{formatTime(recordingDuration)}</span>
+              <span className="text-xs font-bold tracking-widest font-mono">{formatTime(recordingDuration)}</span>
            </div>
         ) : (
-           <div className="flex items-center gap-4">
-              <Zap size={22} className="text-white/80" />
-              <Timer size={22} className="text-white/80" />
-              <Settings size={22} className="text-white/80" />
+           <div className="flex items-center gap-6 drop-shadow-md">
+              <Zap size={24} strokeWidth={1.5} className="opacity-90" />
+              <Settings size={24} strokeWidth={1.5} className="opacity-90" />
            </div>
         )}
-        
         <div className="w-8"></div>
       </div>
 
-      {/* Main Viewport */}
-      <div className="flex-1 relative bg-[#0a0a0a]">
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+      {/* Viewport */}
+      <div className="flex-1 relative bg-[#121212] overflow-hidden rounded-b-3xl">
+        <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="w-full h-full object-cover transition-transform duration-500" 
+            style={{ transform: `scale(${zoomLevel})` }}
+        />
         
-        {countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-40">
-                <span className="text-[140px] font-black text-white animate-in zoom-in duration-300 drop-shadow-2xl">{countdown}</span>
+        {/* Zoom Controls (Android Style) */}
+        {!isRecording && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                {[0.5, 1, 2].map((z) => (
+                    <button 
+                        key={z}
+                        onClick={() => setZoomLevel(z)}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${zoomLevel === z ? 'bg-white text-black scale-110' : 'text-white hover:bg-white/20'}`}
+                    >
+                        {z}x
+                    </button>
+                ))}
+            </div>
+        )}
+      </div>
+      
+      {/* Bottom Controls Area (Android Material 3) */}
+      <div className="h-40 bg-black flex flex-col justify-center items-center px-8 pb-safe relative">
+        
+        {/* Text Mode Selector */}
+        {!isRecording && (
+            <div className="flex gap-6 mb-5 text-xs font-bold uppercase tracking-widest text-gray-500">
+                <span>Photo</span>
+                <span className="text-white scale-110 border-b-2 border-transparent">Video</span>
+                <span>Shorts</span>
             </div>
         )}
 
-        {/* Focus Indicator (Android Style) */}
-        {!isRecording && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border border-yellow-400 opacity-40 rounded-sm"></div>}
-      </div>
-      
-      {/* Bottom Controls (Native Android Layout) */}
-      <div className="h-44 bg-black flex flex-col justify-center items-center px-8 relative pb-safe">
-        
-        {/* Mode Selector (Android Camera Slider Style) */}
-        <div className="flex gap-6 mb-6 opacity-60 text-xs font-bold uppercase tracking-tighter">
-            <span>PORTRAIT</span>
-            <span className="text-yellow-400">VIDEO</span>
-            <span>PHOTO</span>
-        </div>
-
-        <div className="flex items-center justify-between w-full max-w-sm">
-            {/* Gallery Preview */}
+        <div className="flex items-center justify-between w-full max-w-sm px-4">
+            {/* Gallery */}
             <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden bg-gray-800 flex items-center justify-center active:scale-90 transition-transform"
+                className="w-12 h-12 rounded-full border border-white/20 bg-gray-800 flex items-center justify-center overflow-hidden active:scale-90 transition-transform"
             >
-               <ImageIcon size={20} className="text-white/60" />
+               <ImageIcon size={20} className="text-white/70" />
             </button>
             <input type="file" ref={fileInputRef} className="hidden" accept="video/*" onChange={(e) => e.target.files?.[0] && onVideoReady(e.target.files[0])} />
 
-            {/* Shutter Button (Android Native Design) */}
+            {/* Shutter Button - Pixel Style */}
             <button 
-              onClick={isRecording ? stopRecording : handleStartSequence}
-              className="relative w-20 h-20 flex items-center justify-center group"
+              onClick={isRecording ? stopRecording : startRecording}
+              className="relative group transition-transform active:scale-95"
             >
-                <div className="absolute inset-0 rounded-full border-[3px] border-white scale-100 group-active:scale-95 transition-transform"></div>
-                <div className={`transition-all duration-300 ${isRecording ? 'w-8 h-8 bg-red-600 rounded-lg' : 'w-16 h-16 bg-red-600 rounded-full'} shadow-xl`}></div>
+                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-colors duration-300 ${isRecording ? 'border-white' : 'border-white'}`}>
+                    <div className={`rounded-full transition-all duration-300 ${isRecording ? 'w-8 h-8 bg-red-600 rounded-md' : 'w-16 h-16 bg-red-600'}`}></div>
+                </div>
             </button>
 
-            {/* Lens Switcher */}
+            {/* Flip Camera */}
             <button 
                 onClick={() => setCameraFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center active:rotate-180 transition-transform duration-500"
+                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center active:rotate-180 transition-transform duration-500 hover:bg-white/20"
             >
-               <SwitchCamera size={24} className="text-white" />
+               <SwitchCamera size={24} className="text-white" strokeWidth={1.5} />
             </button>
         </div>
       </div>
